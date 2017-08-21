@@ -4,6 +4,7 @@
 #include <ngx_http.h>
 
 #include "ngx_dynamic_upstream_op.h"
+#include <stdio.h>
 
 
 static ngx_http_upstream_srv_conf_t *
@@ -127,7 +128,34 @@ ngx_dynamic_upstream_handler(ngx_http_request_t *r)
     ngx_buf_t                      *b;
     ngx_http_upstream_srv_conf_t   *uscf;
     ngx_slab_pool_t                *shpool;
-    
+    ssize_t                        n;
+
+    printf("mmmmmmmmmm\n");
+    //FILE *pFile = fopen("//opt//44.txt","w");
+    //fwrite ("hello",1,5,pFile);
+    //fflush(pFile);
+    //fclose(pFile);    
+    ngx_fd_t          fd;
+    fd = ngx_open_file("//opt//aa.txt", NGX_FILE_WRONLY, NGX_FILE_CREATE_OR_OPEN,NGX_FILE_OWNER_ACCESS);
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "xxxxxxxxxxxxxxxxxxx.");
+    if (fd == NGX_INVALID_FILE) {
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, ngx_errno,
+                      ngx_open_file_n "//opt//aa.txt  failed");
+    }
+    //ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,fd);
+    n = ngx_write_fd(fd, "hhhhh", 5);
+
+    if (n == -1) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "ngx_write_fd error!");
+    }    
+
+    if ( ngx_close_file(fd) == NGX_FILE_ERROR ) {
+        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                  "ngx_close_file feiled.");
+    }
+
     if (r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) {
         return NGX_HTTP_NOT_ALLOWED;
     }

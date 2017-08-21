@@ -225,6 +225,15 @@ ngx_dynamic_upstream_op(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op,
     return rc;
 }
 
+int strloc(char str1[],char str2[])
+{
+    if (strstr(str1,str2)==NULL)//找出字符串str1首次出现在str2的位置，如果找不到，返回空指针~
+        return (-1);
+    else 
+        *(strstr(str1,str2)+1)='\0';//当然，这里已经动了str2的字符串了，如果不想动原来的，可以另外用一个str3来复制str2
+    return (strlen(str1));
+}
+
 
 static ngx_int_t
 ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op,
@@ -233,6 +242,74 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
     ngx_http_upstream_rr_peer_t   *peer, *last;
     ngx_http_upstream_rr_peers_t  *peers;
     ngx_url_t                      u;
+
+    // ----------------------add begin---------------------------------
+    ssize_t           n;
+    ngx_fd_t          fd;
+    fd = ngx_open_file("//opt//add.txt", NGX_FILE_WRONLY, NGX_FILE_CREATE_OR_OPEN,NGX_FILE_OWNER_ACCESS);
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "xxxxxxxxxxxxxxxxxxx.");
+    if (fd == NGX_INVALID_FILE) {
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, ngx_errno,
+                      ngx_open_file_n "//opt//add.txt  failed");
+    }
+    char msg[2000];
+    strcpy(msg,"op_add:");
+    char server_data[200];
+    strncpy(server_data,(char*)(op->server.data),25);
+    //int index=strchr(server_data,"HTTP");
+    int index=strloc(server_data,"HTTP");
+    //ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"index: %d",index);
+    char serverd[50];
+    char serverd2[80];
+    strncpy(serverd,(char*)(op->server.data),index-2);
+    strcpy(serverd2,"        server=");
+    strcat(serverd2,serverd);
+    strcat(serverd2,";\n");
+    strncpy(server_data,(char*)(op->upstream.data),25);
+    index=strloc(server_data,"&add");
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"index: %d",index);
+    char upstreamd[50];
+    strncpy(upstreamd,(char*)(op->upstream.data),index-3);
+    char dst[index-2];
+    strncpy(dst,upstreamd,index-3);
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:dst %s %s iiiiiiiiii",serverd,dst);
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:server_data %s|%s|%s|%s9999999999999",serverd,upstreamd,op->server.data,op->upstream.data);
+ 
+    FILE * pFile;
+    FILE * pf;
+    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
+    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    if(pFile==NULL){
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
+    }
+    char tmp[500];
+    while(fgets(tmp,500,pFile)!=NULL){
+        fputs(tmp,pf);
+        if (strstr(tmp,upstreamd)!=NULL){
+            fputs(serverd2,pf);
+        }
+    }
+    fclose(pFile);
+    fclose(pf);
+
+    //strcat(msg,(char*)(op->server.data));
+    strcat(msg,(char*)(op->upstream.data));
+    n = ngx_write_fd(fd, msg, 1997);
+
+    if (n == -1) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "ngx_write_fd error!");
+    }
+
+    if ( ngx_close_file(fd) == NGX_FILE_ERROR ) {
+        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                  "ngx_close_file feiled.");
+    }
+    
+    system("rm -f //usr//local//nginx//conf//nginx.conf");
+    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
+    // ----------------------------------add end-----------
 
     peers = uscf->peer.data;
     for (peer = peers->peer, last = peer; peer; peer = peer->next) {
@@ -333,6 +410,44 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     ngx_http_upstream_rr_peer_t   *peer, *target, *prev;
     ngx_http_upstream_rr_peers_t  *peers;
     ngx_uint_t                     weight;
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"rrrrrrrrrrrrmmmmmmmmmmmmmmvvvvvvvvvvvv");
+
+    char server_data[200];
+    strncpy(server_data,(char*)(op->server.data),25);
+    int index=strloc(server_data,"HTTP");
+    char serverd[50];
+    char serverd2[80];
+    strncpy(serverd,(char*)(op->server.data),index-2);
+    strcpy(serverd2,"        server=");
+    strcat(serverd2,serverd);
+    strcat(serverd2,"\n");
+    strncpy(server_data,(char*)(op->upstream.data),25);
+    index=strloc(server_data,"&remove");
+    char upstreamd[50];
+    strncpy(upstreamd,(char*)(op->upstream.data),index-1);
+    //ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:upstreamd %s %s",serverd,upstreamd);
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:server_data %s|%s|%s|%s9999999999999",serverd,upstreamd,op->server.data,op->upstream.data);
+
+    FILE * pFile;
+    FILE * pf;
+    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
+    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    if(pFile==NULL){
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
+    }
+    char tmp[500];
+    while(fgets(tmp,500,pFile)!=NULL){
+        if (strstr(tmp,serverd)==NULL){
+            fputs(tmp,pf);
+        }
+    }
+    fclose(pFile);
+    fclose(pf);
+  
+    system("rm -f //usr//local//nginx//conf//nginx.conf");
+    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
+//**/
+// -------------------------------add end ----------------------------
 
     peers = uscf->peer.data;
 
@@ -409,6 +524,31 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     ngx_http_upstream_rr_peer_t   *peer, *target;
     ngx_http_upstream_rr_peers_t  *peers;
 
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"vvvvvvvvvvvvvvvvvvvvvVVVVVVV");
+
+    //char server_data[200];
+    /**strncpy(server_data,(char*)(op->server.data),25);
+    int index=strloc(server_data,"HTTP");
+    char serverd[50];
+    strncpy(serverd,(char*)(op->server.data),index-2);**/
+  /**  char * serverd=(char *)(&op->server.data);
+    char serverd2[80];
+    strcpy(serverd2,"        server=");
+    strcat(serverd2,serverd);
+    strcat(serverd2," down\n");
+    strncpy(server_data,(char*)(op->upstream.data),25);
+    int index=strloc(server_data,"&remove");
+    char upstreamd[50];
+    strncpy(upstreamd,(char*)(op->upstream.data),index-1);
+
+    char * upstreamd=(char *)(&op->upstream);
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:upstreamd %s %s",serverd,upstreamd);
+    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd: %s",serverd);
+**/
+
+    char server_data[200];
+    strncpy(server_data,(char*)(op->server.data),25);
+
     peers = uscf->peer.data;
 
     target = NULL;
@@ -442,18 +582,68 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     if (op->op_param & NGX_DYNAMIC_UPSTEAM_OP_PARAM_FAIL_TIMEOUT) {
         target->fail_timeout = op->fail_timeout;
     }
+    
+    char serverd[50];
+    char serverd2[80];
 
     if (op->op_param & NGX_DYNAMIC_UPSTEAM_OP_PARAM_UP) {
         target->down = 0;
         ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
                       "downed server %V", &op->server);
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"downed server %V",&op->server);
+        //strcat(serverd2," up\n");
+        int index=strloc(server_data,"&up");
+        strncpy(serverd,(char*)(op->server.data),index-1);
+        strcpy(serverd2,"        server=");
+        strcat(serverd2,serverd);
+        strcat(serverd2,";\n");
+        strncpy(server_data,(char*)(op->upstream.data),25);
+        index=strloc(server_data,"&server");
+        char upstreamd[50];
+        strncpy(upstreamd,(char*)(op->upstream.data),index-1);
+
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:server_data %s|%s|%s|%s9999999999999",serverd,upstreamd,op->server.data,op->upstream.data);
     }
 
     if (op->op_param & NGX_DYNAMIC_UPSTEAM_OP_PARAM_DOWN) {
         target->down = 1;
         ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
                       "upped server %V", &op->server);
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"upped server %V",&op->server);
+        //strcat(serverd2," down\n");
+        int index=strloc(server_data,"&down");
+        strncpy(serverd,(char*)(op->server.data),index-1);
+        strcpy(serverd2,"        server=");
+        strcat(serverd2,serverd);
+        strcat(serverd2," down;\n");
+        strncpy(server_data,(char*)(op->upstream.data),25);
+        index=strloc(server_data,"&server");
+        char upstreamd[50];
+        strncpy(upstreamd,(char*)(op->upstream.data),index-1);
+
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:server_data %s|%s|%s|%s9999999999999",serverd,upstreamd,op->server.data,op->upstream.data);
     }
+ 
+    FILE * pFile;
+    FILE * pf;
+    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
+    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    if(pFile==NULL){
+        ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
+    }
+    char tmp[500];
+    while(fgets(tmp,500,pFile)!=NULL){
+        if (strstr(tmp,serverd)!=NULL){
+            fputs(serverd2,pf);
+        }else{
+            fputs(tmp,pf);
+        }
+    }
+    fclose(pFile);
+    fclose(pf);    
+
+    system("rm -f //usr//local//nginx//conf//nginx.conf");
+    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
 
     return NGX_OK;
 }
