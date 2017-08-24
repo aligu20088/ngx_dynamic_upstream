@@ -234,6 +234,15 @@ int strloc(char str1[],char str2[])
     return (strlen(str1));
 }
 
+int strloc2(char str1[],int length,char ch)
+{
+   int i=0;
+   for(;i<length;i++){
+       if(str1[i]==ch)return i;
+   }
+   return -1;
+}
+
 
 static ngx_int_t
 ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op,
@@ -244,6 +253,7 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
     ngx_url_t                      u;
 
     // ----------------------add begin---------------------------------
+    char * cfg_file = (char *)(uscf->file_name);
     ssize_t           n;
     ngx_fd_t          fd;
     fd = ngx_open_file("//opt//add.txt", NGX_FILE_WRONLY, NGX_FILE_CREATE_OR_OPEN,NGX_FILE_OWNER_ACCESS);
@@ -263,14 +273,15 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
     char serverd[50];
     char serverd2[80];
     strncpy(serverd,(char*)(op->server.data),index-2);
-    strcpy(serverd2,"        server=");
+    strcpy(serverd2,"        server ");
     strcat(serverd2,serverd);
     strcat(serverd2,";\n");
     strncpy(server_data,(char*)(op->upstream.data),25);
-    index=strloc(server_data,"&add");
+    //index=strloc(server_data,200,"&add");
+    index=strloc2(server_data,200,'&');
     ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"index: %d",index);
     char upstreamd[50];
-    strncpy(upstreamd,(char*)(op->upstream.data),index-3);
+    strncpy(upstreamd,(char*)(op->upstream.data),index-1);
     char dst[index-2];
     strncpy(dst,upstreamd,index-3);
     ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:dst %s %s iiiiiiiiii",serverd,dst);
@@ -278,8 +289,9 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
  
     FILE * pFile;
     FILE * pf;
-    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
-    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    char * tmp_file="//tmp//nginx.conf";
+    pFile=fopen(cfg_file,"r");
+    pf=fopen(tmp_file,"w");
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -307,8 +319,14 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
                   "ngx_close_file feiled.");
     }
     
-    system("rm -f //usr//local//nginx//conf//nginx.conf");
-    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
+    char cmd[100]="rm -f ";
+    strcat(cmd,cfg_file);
+    system(cmd);
+    char cmd2[200]="mv ";
+    strcat(cmd2,tmp_file);
+    strcat(cmd2," ");
+    strcat(cmd2,cfg_file);
+    system(cmd2);
     // ----------------------------------add end-----------
 
     peers = uscf->peer.data;
@@ -411,6 +429,7 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     ngx_http_upstream_rr_peers_t  *peers;
     ngx_uint_t                     weight;
     ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"rrrrrrrrrrrrmmmmmmmmmmmmmmvvvvvvvvvvvv");
+    char * cfg_file = (char *)(uscf->file_name);
 
     char server_data[200];
     strncpy(server_data,(char*)(op->server.data),25);
@@ -418,7 +437,7 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     char serverd[50];
     char serverd2[80];
     strncpy(serverd,(char*)(op->server.data),index-2);
-    strcpy(serverd2,"        server=");
+    strcpy(serverd2,"        server ");
     strcat(serverd2,serverd);
     strcat(serverd2,"\n");
     strncpy(server_data,(char*)(op->upstream.data),25);
@@ -430,8 +449,9 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
 
     FILE * pFile;
     FILE * pf;
-    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
-    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    char * tmp_file="//tmp//nginx.conf";
+    pFile=fopen(cfg_file,"r");
+    pf=fopen(tmp_file,"w");
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -444,8 +464,14 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     fclose(pFile);
     fclose(pf);
   
-    system("rm -f //usr//local//nginx//conf//nginx.conf");
-    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
+    char cmd[100]="rm -f ";
+    strcat(cmd,cfg_file);
+    system(cmd);
+    char cmd2[200]="mv ";
+    strcat(cmd2,tmp_file);
+    strcat(cmd2," ");
+    strcat(cmd2,cfg_file);
+    system(cmd2);
 //**/
 // -------------------------------add end ----------------------------
 
@@ -525,6 +551,8 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     ngx_http_upstream_rr_peers_t  *peers;
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"vvvvvvvvvvvvvvvvvvvvvVVVVVVV");
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"sssssssss:%s", (u_char *)(uscf->file_name));
+    char * cfg_file = (char *)(uscf->file_name);
 
     //char server_data[200];
     /**strncpy(server_data,(char*)(op->server.data),25);
@@ -594,7 +622,7 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
         //strcat(serverd2," up\n");
         int index=strloc(server_data,"&up");
         strncpy(serverd,(char*)(op->server.data),index-1);
-        strcpy(serverd2,"        server=");
+        strcpy(serverd2,"        server ");
         strcat(serverd2,serverd);
         strcat(serverd2,";\n");
         strncpy(server_data,(char*)(op->upstream.data),25);
@@ -613,7 +641,7 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
         //strcat(serverd2," down\n");
         int index=strloc(server_data,"&down");
         strncpy(serverd,(char*)(op->server.data),index-1);
-        strcpy(serverd2,"        server=");
+        strcpy(serverd2,"        server ");
         strcat(serverd2,serverd);
         strcat(serverd2," down;\n");
         strncpy(server_data,(char*)(op->upstream.data),25);
@@ -626,8 +654,10 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
  
     FILE * pFile;
     FILE * pf;
-    pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
-    pf=fopen("//usr//local//nginx//conf//nginx2.conf","w");
+    char * tmp_file="//tmp//nginx.conf";
+    //pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
+    pFile=fopen(cfg_file,"r");
+    pf=fopen(tmp_file,"w");
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -642,8 +672,15 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     fclose(pFile);
     fclose(pf);    
 
-    system("rm -f //usr//local//nginx//conf//nginx.conf");
-    system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
+    char cmd[100]="rm -f ";
+    strcat(cmd,cfg_file);
+    system(cmd);
+    char cmd2[200]="mv ";
+    strcat(cmd2,tmp_file);
+    strcat(cmd2," ");
+    strcat(cmd2,cfg_file);
+    system(cmd2);
+    //system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
 
     return NGX_OK;
 }
