@@ -2,6 +2,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include <sys/file.h>
 
 
 #include "ngx_dynamic_upstream_module.h"
@@ -292,6 +293,7 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
     char * tmp_file="//tmp//nginx.conf";
     pFile=fopen(cfg_file,"r");
     pf=fopen(tmp_file,"w");
+    flock(pf->_fileno, LOCK_EX); //lock file.
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -318,15 +320,13 @@ ngx_dynamic_upstream_op_add(ngx_http_request_t *r, ngx_dynamic_upstream_op_t *op
         ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                   "ngx_close_file feiled.");
     }
-    
-    char cmd[100]="rm -f ";
-    strcat(cmd,cfg_file);
-    system(cmd);
-    char cmd2[200]="mv ";
+     
+    char cmd2[200]="mv -f ";
     strcat(cmd2,tmp_file);
     strcat(cmd2," ");
     strcat(cmd2,cfg_file);
     system(cmd2);
+    flock(pf->_fileno, LOCK_UN); //unlock file.
     // ----------------------------------add end-----------
 
     peers = uscf->peer.data;
@@ -452,6 +452,7 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     char * tmp_file="//tmp//nginx.conf";
     pFile=fopen(cfg_file,"r");
     pf=fopen(tmp_file,"w");
+    flock(pf->_fileno, LOCK_EX);
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -464,14 +465,12 @@ ngx_dynamic_upstream_op_remove(ngx_http_request_t *r, ngx_dynamic_upstream_op_t 
     fclose(pFile);
     fclose(pf);
   
-    char cmd[100]="rm -f ";
-    strcat(cmd,cfg_file);
-    system(cmd);
-    char cmd2[200]="mv ";
+    char cmd2[200]="mv -f ";
     strcat(cmd2,tmp_file);
     strcat(cmd2," ");
     strcat(cmd2,cfg_file);
     system(cmd2);
+    flock(pf->_fileno, LOCK_UN);
 //**/
 // -------------------------------add end ----------------------------
 
@@ -553,26 +552,6 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"vvvvvvvvvvvvvvvvvvvvvVVVVVVV");
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,"sssssssss:%s", (u_char *)(uscf->file_name));
     char * cfg_file = (char *)(uscf->file_name);
-
-    //char server_data[200];
-    /**strncpy(server_data,(char*)(op->server.data),25);
-    int index=strloc(server_data,"HTTP");
-    char serverd[50];
-    strncpy(serverd,(char*)(op->server.data),index-2);**/
-  /**  char * serverd=(char *)(&op->server.data);
-    char serverd2[80];
-    strcpy(serverd2,"        server=");
-    strcat(serverd2,serverd);
-    strcat(serverd2," down\n");
-    strncpy(server_data,(char*)(op->upstream.data),25);
-    int index=strloc(server_data,"&remove");
-    char upstreamd[50];
-    strncpy(upstreamd,(char*)(op->upstream.data),index-1);
-
-    char * upstreamd=(char *)(&op->upstream);
-    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd:upstreamd %s %s",serverd,upstreamd);
-    ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"serverd: %s",serverd);
-**/
 
     char server_data[200];
     strncpy(server_data,(char*)(op->server.data),25);
@@ -658,6 +637,7 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     //pFile=fopen("//usr//local//nginx//conf//nginx.conf","r");
     pFile=fopen(cfg_file,"r");
     pf=fopen(tmp_file,"w");
+    flock(pf->_fileno, LOCK_EX);
     if(pFile==NULL){
         ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,"open nginx.conf failed.");
     }
@@ -672,14 +652,15 @@ ngx_dynamic_upstream_op_update_param(ngx_http_request_t *r, ngx_dynamic_upstream
     fclose(pFile);
     fclose(pf);    
 
-    char cmd[100]="rm -f ";
+    /**char cmd[100]="rm -f ";
     strcat(cmd,cfg_file);
-    system(cmd);
-    char cmd2[200]="mv ";
+    system(cmd);**/
+    char cmd2[200]="mv -f ";
     strcat(cmd2,tmp_file);
     strcat(cmd2," ");
     strcat(cmd2,cfg_file);
     system(cmd2);
+    flock(pf->_fileno, LOCK_UN);
     //system("mv //usr//local//nginx//conf//nginx2.conf //usr//local//nginx//conf//nginx.conf");
 
     return NGX_OK;
